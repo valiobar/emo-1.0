@@ -2,23 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const NAV_LINKS = [
   { href: "/", label: "Начало" },
   { href: "/waiter", label: "Сервитьор" },
   { href: "/kitchen", label: "Кухня" },
-  { href: "/admin/menu", label: "Админ меню" },
-  { href: "/admin/tables", label: "Админ маси" },
+  { href: "/admin", label: "Админ" },
 ];
 
 export function HamburgerMenu() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   return (
     <div className="fixed right-4 top-4 z-50">
@@ -41,6 +36,7 @@ export function HamburgerMenu() {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => setOpen(false)}
                 className={`block rounded-lg px-3 py-2 text-sm ${
                   isActive
                     ? "bg-indigo-50 font-medium text-indigo-700"

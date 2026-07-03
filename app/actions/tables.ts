@@ -15,6 +15,7 @@ export async function createTable(name: string) {
 
   revalidatePath("/waiter");
   revalidatePath("/admin/tables");
+  revalidatePath("/admin");
 }
 
 export async function renameTable(id: string, name: string) {
@@ -27,6 +28,7 @@ export async function renameTable(id: string, name: string) {
 
   revalidatePath("/waiter");
   revalidatePath("/admin/tables");
+  revalidatePath("/admin");
 }
 
 export async function deleteTable(id: string) {
@@ -54,4 +56,5 @@ export async function deleteTable(id: string) {
 
   revalidatePath("/waiter");
   revalidatePath("/admin/tables");
+  revalidatePath("/admin");
 }

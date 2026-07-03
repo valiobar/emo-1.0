@@ -26,6 +26,7 @@ export async function createCategory(name: string, sortOrder = 0) {
   }
 
   revalidatePath("/admin/menu");
+  revalidatePath("/admin");
   revalidatePath("/waiter");
 }
 
@@ -38,6 +39,7 @@ export async function deleteCategory(id: string) {
   }
 
   revalidatePath("/admin/menu");
+  revalidatePath("/admin");
   revalidatePath("/waiter");
 }
 
@@ -54,6 +56,7 @@ export async function createMenuItem(input: CreateMenuItemInput) {
   }
 
   revalidatePath("/admin/menu");
+  revalidatePath("/admin");
   revalidatePath("/waiter");
 }
 
@@ -73,6 +76,7 @@ export async function updateMenuItem(id: string, input: UpdateMenuItemInput) {
   }
 
   revalidatePath("/admin/menu");
+  revalidatePath("/admin");
   revalidatePath("/waiter");
 }
 
@@ -85,5 +89,6 @@ export async function deleteMenuItem(id: string) {
   }
 
   revalidatePath("/admin/menu");
+  revalidatePath("/admin");
   revalidatePath("/waiter");
 }
