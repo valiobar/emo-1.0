@@ -128,6 +128,124 @@ export async function openOrderForTable(tableId: string): Promise<string> {
   return data.id;
 }
 
+export async function addOrderItemForTable(tableId: string, menuItemId: string, quantity = 1) {
+  const supabase = createServiceRoleClient();
+
+  const { data: existing, error: existingError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("table_id", tableId)
+    .eq("status", "open")
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  let orderId = existing?.id;
+
+  if (!orderId) {
+    const { data, error } = await supabase
+      .from("orders")
+      .insert({ table_id: tableId, status: "open" })
+      .select("id")
+      .single();
+
+    if (error) {
+      if (error.code !== "23505") {
+        throw new Error(error.message);
+      }
+
+      const { data: raceOrder, error: raceError } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("table_id", tableId)
+        .eq("status", "open")
+        .single();
+
+      if (raceError) {
+        throw new Error(raceError.message);
+      }
+
+      orderId = raceOrder.id;
+    } else {
+      orderId = data.id;
+    }
+  }
+
+  const { error: tableError } = await supabase
+    .from("tables")
+    .update({ status: "occupied" })
+    .eq("id", tableId);
+
+  if (tableError) {
+    throw new Error(tableError.message);
+  }
+
+  if (!orderId) {
+    throw new Error("Неуспешно създаване на отворена поръчка");
+  }
+
+  await addOrderItem(orderId, menuItemId, quantity);
+
+  revalidatePath("/waiter");
+  revalidatePath(`/waiter/${tableId}`);
+
+  return orderId;
+}
+
+export async function addOrderItemsForTable(
+  tableId: string,
+  items: { menuItemId: string; quantity: number }[],
+) {
+  const normalizedItems = items.filter(
+    (item) => item.menuItemId.trim().length > 0 && item.quantity > 0,
+  );
+  if (normalizedItems.length === 0) {
+    throw new Error("Няма валидни артикули за добавяне");
+  }
+
+  const orderId = await openOrderForTable(tableId);
+  const supabase = createServiceRoleClient();
+
+  const menuItemIds = Array.from(new Set(normalizedItems.map((item) => item.menuItemId)));
+  const { data: menuItems, error: menuItemsError } = await supabase
+    .from("menu_items")
+    .select("id, name, price")
+    .in("id", menuItemIds);
+
+  if (menuItemsError) {
+    throw new Error(menuItemsError.message);
+  }
+
+  const menuById = new Map((menuItems ?? []).map((item) => [item.id, item]));
+  const rowsToInsert = normalizedItems.map((item) => {
+    const menu = menuById.get(item.menuItemId);
+    if (!menu) {
+      throw new Error("Артикулът от менюто не е намерен");
+    }
+
+    return {
+      order_id: orderId,
+      menu_item_id: item.menuItemId,
+      name_snapshot: menu.name,
+      price_snapshot: menu.price,
+      quantity: item.quantity,
+      status: "pending" as const,
+    };
+  });
+
+  const { error: insertError } = await supabase.from("order_items").insert(rowsToInsert);
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+
+  revalidatePath("/waiter");
+  revalidatePath(`/waiter/${tableId}`);
+
+  return orderId;
+}
+
 export async function addOrderItem(orderId: string, menuItemId: string, quantity = 1) {
   const supabase = createServiceRoleClient();
 
@@ -211,6 +329,74 @@ export async function updateItemStatus(itemId: string, status: UpdatableItemStat
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function removeOrderItem(itemId: string) {
+  const supabase = createServiceRoleClient();
+  const { data: item, error: itemError } = await supabase
+    .from("order_items")
+    .select("order_id, status")
+    .eq("id", itemId)
+    .single();
+
+  if (itemError) {
+    throw new Error(itemError.message);
+  }
+
+  if (item.status !== "pending") {
+    throw new Error("Артикулът не може да се изтрие, след като кухнята е започнала работа по него");
+  }
+
+  const { error: deleteError } = await supabase.from("order_items").delete().eq("id", itemId);
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  const { count: remainingItemsCount, error: remainingItemsError } = await supabase
+    .from("order_items")
+    .select("id", { count: "exact", head: true })
+    .eq("order_id", item.order_id);
+
+  if (remainingItemsError) {
+    throw new Error(remainingItemsError.message);
+  }
+
+  if ((remainingItemsCount ?? 0) === 0) {
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("id, table_id, status")
+      .eq("id", item.order_id)
+      .maybeSingle();
+
+    if (orderError) {
+      throw new Error(orderError.message);
+    }
+
+    if (order?.status === "open") {
+      const { error: closeOrderError } = await supabase
+        .from("orders")
+        .update({ status: "closed", closed_at: new Date().toISOString() })
+        .eq("id", order.id)
+        .eq("status", "open");
+
+      if (closeOrderError) {
+        throw new Error(closeOrderError.message);
+      }
+
+      const { error: freeTableError } = await supabase
+        .from("tables")
+        .update({ status: "free" })
+        .eq("id", order.table_id);
+
+      if (freeTableError) {
+        throw new Error(freeTableError.message);
+      }
+
+      revalidatePath(`/waiter/${order.table_id}`);
+    }
+  }
+
+  revalidatePath("/waiter");
 }
 
 export async function closeOrder(orderId: string, tableId: string) {

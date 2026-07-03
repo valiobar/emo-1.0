@@ -1,6 +1,6 @@
 import { OrderItemStatus, TableStatus } from "./types";
 
-export const CURRENCY = "EUR";
+export const CURRENCY = "€";
 export const APP_TIME_ZONE = "Europe/Sofia";
 
 export const STATUS_COLORS: Record<OrderItemStatus, string> = {

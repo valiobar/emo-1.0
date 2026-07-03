@@ -1,17 +1,17 @@
 "use client";
 
-import { addOrderItem } from "@/app/actions/orders";
 import { CURRENCY } from "@/lib/constants";
 import { MenuCategory, MenuItem } from "@/lib/types";
 import { useState, useTransition } from "react";
 
 interface MenuPickerProps {
-  readonly orderId: string;
+  readonly onAddItem: (menuItemId: string) => void;
   readonly categories: MenuCategory[];
   readonly items: MenuItem[];
+  readonly disabled?: boolean;
 }
 
-export function MenuPicker({ orderId, categories, items }: MenuPickerProps) {
+export function MenuPicker({ onAddItem, categories, items, disabled = false }: MenuPickerProps) {
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id);
   const [isPending, startTransition] = useTransition();
 
@@ -48,8 +48,12 @@ export function MenuPicker({ orderId, categories, items }: MenuPickerProps) {
           <button
             key={item.id}
             type="button"
-            disabled={isPending}
-            onClick={() => startTransition(() => addOrderItem(orderId, item.id, 1))}
+            disabled={isPending || disabled}
+            onClick={() =>
+              startTransition(() => {
+                onAddItem(item.id);
+              })
+            }
             className="min-h-10 rounded-xl border border-gray-200 bg-white p-3 text-left text-gray-900 shadow-sm hover:-translate-y-0.5 hover:bg-gray-50 disabled:opacity-50"
           >
             <div className="font-medium">{item.name}</div>

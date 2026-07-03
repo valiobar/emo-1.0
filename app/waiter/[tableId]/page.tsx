@@ -1,12 +1,12 @@
-import { openOrderForTable } from "@/app/actions/orders";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { OrderItem } from "@/lib/types";
 import { notFound } from "next/navigation";
 import { OrderView } from "./OrderView";
 
 export const dynamic = "force-dynamic";
 
 interface TableOrderPageProps {
-  params: Promise<{
+  readonly params: Promise<{
     tableId: string;
   }>;
 }
@@ -29,16 +29,23 @@ export default async function TableOrderPage({ params }: TableOrderPageProps) {
     notFound();
   }
 
-  const orderId = await openOrderForTable(table.id);
+  const { data: openOrder, error: openOrderError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("table_id", table.id)
+    .eq("status", "open")
+    .maybeSingle();
+
+  if (openOrderError) {
+    throw new Error(openOrderError.message);
+  }
 
   const [
     { data: categories, error: categoriesError },
     { data: items, error: itemsError },
-    { data: orderItems, error: orderItemsError },
   ] = await Promise.all([
     supabase.from("menu_categories").select("*").order("sort_order"),
     supabase.from("menu_items").select("*").eq("is_available", true),
-    supabase.from("order_items").select("*").eq("order_id", orderId).order("created_at"),
   ]);
 
   if (categoriesError) {
@@ -47,17 +54,28 @@ export default async function TableOrderPage({ params }: TableOrderPageProps) {
   if (itemsError) {
     throw new Error(itemsError.message);
   }
-  if (orderItemsError) {
-    throw new Error(orderItemsError.message);
+  let orderItems: OrderItem[] = [];
+  if (openOrder?.id) {
+    const { data: orderItemsData, error: orderItemsError } = await supabase
+      .from("order_items")
+      .select("*")
+      .eq("order_id", openOrder.id)
+      .order("created_at");
+
+    if (orderItemsError) {
+      throw new Error(orderItemsError.message);
+    }
+
+    orderItems = orderItemsData ?? [];
   }
 
   return (
     <OrderView
       table={table}
-      orderId={orderId}
+      orderId={openOrder?.id ?? null}
       categories={categories ?? []}
       menuItems={items ?? []}
-      initialOrderItems={orderItems ?? []}
+      initialOrderItems={orderItems}
     />
   );
 }

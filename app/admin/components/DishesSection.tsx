@@ -133,7 +133,7 @@ export function DishesSection({ categories, items }: DishesSectionProps) {
           </span>
         </div>
 
-        <div className="space-y-2">
+        <div className="max-h-80 space-y-2 overflow-y-auto pr-1 md:max-h-96">
           {categories.length === 0 && (
             <p className="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500">
               Все още няма категории. Добавете първата по-долу.
@@ -205,7 +205,7 @@ export function DishesSection({ categories, items }: DishesSectionProps) {
           </span>
         </div>
 
-        <div className="space-y-2">
+        <div className="max-h-80 space-y-2 overflow-y-auto pr-1 md:max-h-96">
           {filteredItems.length === 0 && (
             <p className="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500">
               Все още няма ястия в тази категория. Създайте първото по-долу.

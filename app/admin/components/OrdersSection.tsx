@@ -74,7 +74,7 @@ export function OrdersSection({
         </button>
       </form>
 
-      <div className="space-y-2">
+      <div className="max-h-112 space-y-2 overflow-y-auto pr-1 md:max-h-128">
         {orders.length === 0 ? (
           <p className="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500">
             Няма поръчки за избрания период.

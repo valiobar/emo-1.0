@@ -70,7 +70,7 @@ export function TablesSection({ tables }: TablesSectionProps) {
         <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">{tables.length}</span>
       </div>
 
-      <div className="space-y-2">
+      <div className="max-h-112 space-y-2 overflow-y-auto pr-1 md:max-h-128">
         {tables.length === 0 && (
           <p className="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500">
             Все още няма конфигурирани маси. Добавете първата маса по-долу.

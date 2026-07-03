@@ -1,6 +1,7 @@
 "use client";
 
-import { updateItemQuantity, updateItemStatus } from "@/app/actions/orders";
+import { removeOrderItem, updateItemQuantity, updateItemStatus } from "@/app/actions/orders";
+import { IconActionButton } from "@/components/IconActionButton";
 import { CURRENCY } from "@/lib/constants";
 import { OrderItem } from "@/lib/types";
 import { useTransition } from "react";
@@ -12,6 +13,15 @@ interface OrderItemRowProps {
 
 export function OrderItemRow({ item }: OrderItemRowProps) {
   const [isPending, startTransition] = useTransition();
+
+  function handleRemoveClick() {
+    if (item.status !== "pending") {
+      alert("Артикулът може да се изтрие само когато е със статус Чака");
+      return;
+    }
+
+    startTransition(() => removeOrderItem(item.id));
+  }
 
   return (
     <div className="flex items-center justify-between gap-3 border-b border-gray-200 py-3">
@@ -50,6 +60,16 @@ export function OrderItemRow({ item }: OrderItemRowProps) {
             </button>
           </div>
         )}
+
+        <IconActionButton
+          onClick={handleRemoveClick}
+          label="Премахни артикул"
+          title="Премахни артикул"
+          tone="danger"
+          disabled={isPending}
+        >
+          🗑
+        </IconActionButton>
 
         {item.status === "ready" && (
           <button
