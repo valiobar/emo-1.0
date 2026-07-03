@@ -40,8 +40,24 @@ function extractTableIdFromReadyItem(item: unknown): string | null {
 }
 
 interface TableGridProps {
-  initialTables: RestaurantTable[];
-  initialReadyCounts: Record<string, number>;
+  readonly initialTables: RestaurantTable[];
+  readonly initialReadyCounts: Record<string, number>;
+}
+
+function applyTablePayload(
+  prev: RestaurantTable[],
+  payload: RealtimePostgresChangesPayload<RestaurantTable>,
+) {
+  if (payload.eventType === "INSERT" && payload.new) {
+    return [...prev, payload.new];
+  }
+  if (payload.eventType === "UPDATE" && payload.new) {
+    return prev.map((table) => (table.id === payload.new.id ? payload.new : table));
+  }
+  if (payload.eventType === "DELETE" && payload.old) {
+    return prev.filter((table) => table.id !== payload.old.id);
+  }
+  return prev;
 }
 
 export function TableGrid({ initialTables, initialReadyCounts }: TableGridProps) {
@@ -78,22 +94,8 @@ export function TableGrid({ initialTables, initialReadyCounts }: TableGridProps)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tables" },
-        (payload: RealtimePostgresChangesPayload<RestaurantTable>) => {
-          setTables((prev) => {
-            if (payload.eventType === "INSERT" && payload.new) {
-              return [...prev, payload.new];
-            }
-            if (payload.eventType === "UPDATE" && payload.new) {
-              return prev.map((table) =>
-                table.id === payload.new.id ? payload.new : table,
-              );
-            }
-            if (payload.eventType === "DELETE" && payload.old) {
-              return prev.filter((table) => table.id !== payload.old.id);
-            }
-            return prev;
-          });
-        },
+        (payload: RealtimePostgresChangesPayload<RestaurantTable>) =>
+          setTables((prev) => applyTablePayload(prev, payload)),
       )
       .on(
         "postgres_changes",
@@ -103,19 +105,26 @@ export function TableGrid({ initialTables, initialReadyCounts }: TableGridProps)
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   }, []);
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-      {tables.map((table) => (
-        <TableCard
-          key={table.id}
-          table={table}
-          readyCount={readyCounts[table.id] ?? 0}
-        />
-      ))}
-    </div>
+    <>
+      {tables.length === 0 && (
+        <p className="rounded-2xl border border-gray-300 bg-white px-4 py-8 text-center text-sm text-gray-600 shadow-sm">
+          Все още няма маси. Добавете маси от админ секцията.
+        </p>
+      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {tables.map((table) => (
+          <TableCard
+            key={table.id}
+            table={table}
+            readyCount={readyCounts[table.id] ?? 0}
+          />
+        ))}
+      </div>
+    </>
   );
 }

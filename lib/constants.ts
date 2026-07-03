@@ -1,6 +1,7 @@
-import { OrderItemStatus } from "./types";
+import { OrderItemStatus, TableStatus } from "./types";
 
 export const CURRENCY = "EUR";
+export const APP_TIME_ZONE = "Europe/Sofia";
 
 export const STATUS_COLORS: Record<OrderItemStatus, string> = {
   pending: "bg-gray-200 text-gray-800 border-gray-400",
@@ -10,8 +11,13 @@ export const STATUS_COLORS: Record<OrderItemStatus, string> = {
 };
 
 export const STATUS_LABELS: Record<OrderItemStatus, string> = {
-  pending: "Pending",
-  preparing: "Preparing",
-  ready: "Ready",
-  served: "Served",
+  pending: "Чака",
+  preparing: "Приготвя се",
+  ready: "Готово",
+  served: "Сервирано",
+};
+
+export const TABLE_STATUS_LABELS: Record<TableStatus, string> = {
+  free: "Свободна",
+  occupied: "Заета",
 };

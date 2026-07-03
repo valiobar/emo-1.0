@@ -44,7 +44,14 @@ Quantity can only be edited while item status is `pending`.
 ## Environment Variables
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL (client + server)
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Browser client key (read-only in practice via RLS)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: Optional browser key fallback if anon key env name is not used
 - `SUPABASE_SERVICE_ROLE_KEY`: Server-only key for Server Actions
+
+## How Realtime Sync Works
+- Waiter table grid subscribes to `tables` for structural/status changes and re-fetches ready-item counts when `order_items` events arrive.
+- Waiter table detail subscribes to `order_items` filtered by `order_id` and merges inserts/updates/deletes into local state.
+- Kitchen board subscribes to `order_items`; on each event it re-fetches all non-served items for open orders and re-groups them into columns.
+- All writes are made through Server Actions; UI state converges via Supabase Realtime events rather than optimistic-only local writes.
 
 ## Routes
 - `/`: links to Waiter / Kitchen / Admin sections

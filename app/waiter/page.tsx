@@ -68,8 +68,19 @@ export default async function WaiterPage() {
   }
 
   return (
-    <main className="p-4">
-      <h1 className="mb-4 text-2xl font-bold">Tables</h1>
+    <main className="mx-auto w-full max-w-7xl p-4 text-gray-900 sm:p-6">
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Конзола сервитьор</p>
+          <h1 className="text-3xl font-bold tracking-tight">Маси</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            Отворени поръчки по маси и индикатори за готови артикули в реално време.
+          </p>
+        </div>
+        <div className="rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm">
+          {tables?.length ?? 0} маси
+        </div>
+      </header>
       <TableGrid initialTables={tables ?? []} initialReadyCounts={readyCounts} />
     </main>
   );

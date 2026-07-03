@@ -7,16 +7,16 @@ import { useTransition } from "react";
 import { StatusBadge } from "./StatusBadge";
 
 interface OrderItemRowProps {
-  item: OrderItem;
+  readonly item: OrderItem;
 }
 
 export function OrderItemRow({ item }: OrderItemRowProps) {
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="flex items-center justify-between border-b py-2">
+    <div className="flex items-center justify-between gap-3 border-b border-gray-200 py-3">
       <div>
-        <div className="font-medium">
+        <div className="font-medium text-gray-900">
           {item.quantity}x {item.name_snapshot}
         </div>
         <div className="text-sm text-gray-500">
@@ -34,7 +34,7 @@ export function OrderItemRow({ item }: OrderItemRowProps) {
               onClick={() =>
                 startTransition(() => updateItemQuantity(item.id, item.quantity + 1))
               }
-              className="h-6 w-6 rounded border"
+              className="min-h-10 min-w-10 rounded-lg border border-gray-300 bg-white font-semibold text-gray-900 hover:bg-gray-100"
             >
               +
             </button>
@@ -44,7 +44,7 @@ export function OrderItemRow({ item }: OrderItemRowProps) {
               onClick={() =>
                 startTransition(() => updateItemQuantity(item.id, item.quantity - 1))
               }
-              className="h-6 w-6 rounded border"
+              className="min-h-10 min-w-10 rounded-lg border border-gray-300 bg-white font-semibold text-gray-900 hover:bg-gray-100"
             >
               -
             </button>
@@ -56,9 +56,9 @@ export function OrderItemRow({ item }: OrderItemRowProps) {
             type="button"
             disabled={isPending}
             onClick={() => startTransition(() => updateItemStatus(item.id, "served"))}
-            className="rounded bg-blue-600 px-2 py-1 text-xs text-white"
+            className="min-h-10 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-indigo-500"
           >
-            Mark delivered
+            Маркирай като сервирано
           </button>
         )}
       </div>

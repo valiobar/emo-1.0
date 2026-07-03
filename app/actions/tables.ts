@@ -43,7 +43,7 @@ export async function deleteTable(id: string) {
   }
 
   if (openOrder) {
-    throw new Error("Cannot delete a table with an open order");
+    throw new Error("Не може да изтриете маса с отворена поръчка");
   }
 
   const { error } = await supabase.from("tables").delete().eq("id", id);

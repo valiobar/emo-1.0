@@ -7,14 +7,32 @@ import { OrderItemRow } from "@/components/OrderItemRow";
 import { createClient } from "@/lib/supabase/client";
 import { MenuCategory, MenuItem, OrderItem, RestaurantTable } from "@/lib/types";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
 interface OrderViewProps {
-  table: RestaurantTable;
-  orderId: string;
-  categories: MenuCategory[];
-  menuItems: MenuItem[];
-  initialOrderItems: OrderItem[];
+  readonly table: RestaurantTable;
+  readonly orderId: string;
+  readonly categories: MenuCategory[];
+  readonly menuItems: MenuItem[];
+  readonly initialOrderItems: OrderItem[];
+}
+
+function applyOrderItemPayload(
+  prev: OrderItem[],
+  payload: RealtimePostgresChangesPayload<OrderItem>,
+) {
+  if (payload.eventType === "INSERT" && payload.new) {
+    return [...prev, payload.new];
+  }
+  if (payload.eventType === "UPDATE" && payload.new) {
+    return prev.map((item) => (item.id === payload.new.id ? payload.new : item));
+  }
+  if (payload.eventType === "DELETE" && payload.old) {
+    return prev.filter((item) => item.id !== payload.old.id);
+  }
+  return prev;
 }
 
 export function OrderView({
@@ -24,6 +42,7 @@ export function OrderView({
   menuItems,
   initialOrderItems,
 }: OrderViewProps) {
+  const router = useRouter();
   const [orderItems, setOrderItems] = useState(initialOrderItems);
   const [isPending, startTransition] = useTransition();
 
@@ -39,46 +58,48 @@ export function OrderView({
           table: "order_items",
           filter: `order_id=eq.${orderId}`,
         },
-        (payload: RealtimePostgresChangesPayload<OrderItem>) => {
-          setOrderItems((prev) => {
-            if (payload.eventType === "INSERT" && payload.new) {
-              return [...prev, payload.new];
-            }
-            if (payload.eventType === "UPDATE" && payload.new) {
-              return prev.map((item) =>
-                item.id === payload.new.id ? payload.new : item,
-              );
-            }
-            if (payload.eventType === "DELETE" && payload.old) {
-              return prev.filter((item) => item.id !== payload.old.id);
-            }
-            return prev;
-          });
-        },
+        (payload: RealtimePostgresChangesPayload<OrderItem>) =>
+          setOrderItems((prev) => applyOrderItemPayload(prev, payload)),
       )
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   }, [orderId]);
 
   const hasUnservedItems = orderItems.some((item) => item.status !== "served");
 
   return (
-    <main className="mx-auto max-w-2xl p-4">
-      <h1 className="mb-4 text-2xl font-bold">{table.name}</h1>
-      <MenuPicker orderId={orderId} categories={categories} items={menuItems} />
+    <main className="mx-auto max-w-4xl p-4 text-gray-900 sm:p-6">
+      <Link
+        href="/waiter"
+        aria-label="Назад към всички маси"
+        className="fixed left-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-gray-300 bg-white text-xl leading-none text-gray-800 shadow-sm transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+      >
+        <span aria-hidden="true">←</span>
+      </Link>
 
-      <div className="mt-6">
+      <header className="mb-5">
+        <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Конзола сервитьор</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">{table.name}</h1>
+      </header>
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-4 text-gray-900 shadow-sm sm:p-5">
+        <h2 className="mb-3 text-lg font-semibold">Добави артикули</h2>
+        <MenuPicker orderId={orderId} categories={categories} items={menuItems} />
+      </section>
+
+      <section className="mt-5 rounded-2xl border border-gray-200 bg-white p-4 text-gray-900 shadow-sm sm:p-5">
+        <h2 className="mb-3 text-lg font-semibold">Текуща сметка</h2>
         {orderItems.length === 0 && (
-          <p className="text-gray-500">No items ordered yet.</p>
+          <p className="text-gray-500">Все още няма поръчани артикули.</p>
         )}
         {orderItems.map((item) => (
           <OrderItemRow key={item.id} item={item} />
         ))}
         <BillTotal items={orderItems} />
-      </div>
+      </section>
 
       <button
         type="button"
@@ -86,16 +107,25 @@ export function OrderView({
         onClick={() => {
           if (
             hasUnservedItems &&
-            !confirm("Some items are not marked as served yet. Close the bill anyway?")
+            !confirm("Някои артикули все още не са маркирани като сервирани. Да приключа ли сметката въпреки това?")
           ) {
             return;
           }
 
-          startTransition(() => closeOrder(orderId, table.id));
+          startTransition(async () => {
+            try {
+              await closeOrder(orderId, table.id);
+              router.push("/waiter");
+              router.refresh();
+            } catch (error) {
+              console.error("Failed to close order:", error);
+              alert("Неуспешно приключване на сметката. Моля, опитайте отново.");
+            }
+          });
         }}
-        className="mt-4 w-full rounded-lg bg-red-600 py-2 font-medium text-white disabled:opacity-50"
+        className="mt-4 min-h-11 w-full rounded-xl bg-red-600 py-2 font-medium text-white shadow-sm hover:bg-red-500 disabled:opacity-50"
       >
-        Close & pay
+        Приключи и плати
       </button>
     </main>
   );
