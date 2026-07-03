@@ -32,20 +32,28 @@ const LINKS = [
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const supabase = createServiceRoleClient();
-  const { data: closedOrderItems, error: closedOrderItemsError } = await supabase
-    .from("order_items")
-    .select("price_snapshot, quantity, orders!inner(status)")
-    .eq("orders.status", "closed");
+  let earningsTotal = 0;
+  let earningsError = "";
 
-  if (closedOrderItemsError) {
-    throw new Error(closedOrderItemsError.message);
+  try {
+    const supabase = createServiceRoleClient();
+    const { data: closedOrderItems, error: closedOrderItemsError } = await supabase
+      .from("order_items")
+      .select("price_snapshot, quantity, orders!inner(status)")
+      .eq("orders.status", "closed");
+
+    if (closedOrderItemsError) {
+      throw new Error(closedOrderItemsError.message);
+    }
+
+    earningsTotal = (closedOrderItems ?? []).reduce(
+      (sum, item) => sum + item.price_snapshot * item.quantity,
+      0,
+    );
+  } catch (error) {
+    console.error("Failed to load earnings on home page:", error);
+    earningsError = "Неуспешно зареждане на приходите. Проверете сървърната конфигурация.";
   }
-
-  const earningsTotal = (closedOrderItems ?? []).reduce(
-    (sum, item) => sum + item.price_snapshot * item.quantity,
-    0,
-  );
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
@@ -58,6 +66,11 @@ export default async function HomePage() {
         <p className="mt-2 text-center text-sm text-gray-600">
           Изберете работен панел, за да продължите.
         </p>
+        {earningsError ? (
+          <p className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-center text-xs text-amber-700">
+            {earningsError}
+          </p>
+        ) : null}
 
         <div className="mt-6 space-y-3">
           {LINKS.map((link) => (

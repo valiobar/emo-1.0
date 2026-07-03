@@ -46,8 +46,17 @@ async function fetchKitchenItems(
 }
 
 export default async function KitchenPage() {
-  const supabase = createServiceRoleClient();
-  const items = await fetchKitchenItems(supabase);
+  let items: KitchenItem[] = [];
+  let dataError = "";
+
+  try {
+    const supabase = createServiceRoleClient();
+    items = await fetchKitchenItems(supabase);
+  } catch (error) {
+    console.error("Failed to load kitchen page data:", error);
+    dataError = "Неуспешно зареждане на данните за кухнята.";
+  }
+
   const activeCount = items.length;
 
   return (
@@ -64,6 +73,11 @@ export default async function KitchenPage() {
           {activeCount} активни артикула
         </div>
       </header>
+      {dataError ? (
+        <p className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          {dataError}
+        </p>
+      ) : null}
       <KitchenBoard initialItems={items} />
     </main>
   );

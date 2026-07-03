@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { RestaurantTable } from "@/lib/types";
 import { TableGrid } from "./TableGrid";
 
 export const dynamic = "force-dynamic";
@@ -37,29 +38,41 @@ function extractTableIdFromReadyItem(item: unknown): string | null {
 }
 
 export default async function WaiterPage() {
-  const supabase = createServiceRoleClient();
+  let tables: RestaurantTable[] = [];
+  let readyItems: unknown[] = [];
+  let dataError = "";
 
-  const { data: tables, error: tablesError } = await supabase
-    .from("tables")
-    .select("*")
-    .order("name");
+  try {
+    const supabase = createServiceRoleClient();
 
-  if (tablesError) {
-    throw new Error(tablesError.message);
-  }
+    const { data: tablesData, error: tablesError } = await supabase
+      .from("tables")
+      .select("*")
+      .order("name");
 
-  const { data: readyItems, error: readyItemsError } = await supabase
-    .from("order_items")
-    .select("id, status, orders!inner(table_id, status)")
-    .eq("status", "ready")
-    .eq("orders.status", "open");
+    if (tablesError) {
+      throw new Error(tablesError.message);
+    }
 
-  if (readyItemsError) {
-    throw new Error(readyItemsError.message);
+    const { data: readyItemsData, error: readyItemsError } = await supabase
+      .from("order_items")
+      .select("id, status, orders!inner(table_id, status)")
+      .eq("status", "ready")
+      .eq("orders.status", "open");
+
+    if (readyItemsError) {
+      throw new Error(readyItemsError.message);
+    }
+
+    tables = tablesData ?? [];
+    readyItems = readyItemsData ?? [];
+  } catch (error) {
+    console.error("Failed to load waiter page data:", error);
+    dataError = "Неуспешно зареждане на данните за сервитьора.";
   }
 
   const readyCounts: Record<string, number> = {};
-  for (const item of readyItems ?? []) {
+  for (const item of readyItems) {
     const tableId = extractTableIdFromReadyItem(item);
     if (!tableId) {
       continue;
@@ -78,10 +91,15 @@ export default async function WaiterPage() {
           </p>
         </div>
         <div className="rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm">
-          {tables?.length ?? 0} маси
+          {tables.length} маси
         </div>
       </header>
-      <TableGrid initialTables={tables ?? []} initialReadyCounts={readyCounts} />
+      {dataError ? (
+        <p className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          {dataError}
+        </p>
+      ) : null}
+      <TableGrid initialTables={tables} initialReadyCounts={readyCounts} />
     </main>
   );
 }
