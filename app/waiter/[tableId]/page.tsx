@@ -11,6 +11,23 @@ interface TableOrderPageProps {
   }>;
 }
 
+const PRIORITY_CATEGORY_NAMES = [
+  "скара",
+  "skara",
+  "бира",
+  "bira",
+  "безалкохолни напитки",
+  "bezalkoholni napitki",
+  "гарнитури",
+  "garnituri",
+  "салати",
+  "salati",
+];
+
+function normalizeCategoryName(name: string) {
+  return name.trim().toLocaleLowerCase("bg-BG");
+}
+
 export default async function TableOrderPage({ params }: TableOrderPageProps) {
   const { tableId } = await params;
   const supabase = createServiceRoleClient();
@@ -54,6 +71,22 @@ export default async function TableOrderPage({ params }: TableOrderPageProps) {
   if (itemsError) {
     throw new Error(itemsError.message);
   }
+
+  const resolvedCategories = categories ?? [];
+  const priorityByName = new Map(PRIORITY_CATEGORY_NAMES.map((name, index) => [name, index]));
+  const sortedCategories = resolvedCategories
+    .map((category, index) => ({ category, index }))
+    .sort((a, b) => {
+      const aPriority = priorityByName.get(normalizeCategoryName(a.category.name)) ?? Number.POSITIVE_INFINITY;
+      const bPriority = priorityByName.get(normalizeCategoryName(b.category.name)) ?? Number.POSITIVE_INFINITY;
+
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+      return a.index - b.index;
+    })
+    .map((entry) => entry.category);
+
   let orderItems: OrderItem[] = [];
   if (openOrder?.id) {
     const { data: orderItemsData, error: orderItemsError } = await supabase
@@ -73,7 +106,7 @@ export default async function TableOrderPage({ params }: TableOrderPageProps) {
     <OrderView
       table={table}
       orderId={openOrder?.id ?? null}
-      categories={categories ?? []}
+      categories={sortedCategories}
       menuItems={items ?? []}
       initialOrderItems={orderItems}
     />

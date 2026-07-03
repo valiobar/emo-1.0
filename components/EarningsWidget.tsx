@@ -121,11 +121,7 @@ export function EarningsWidget({ earningsTotal }: EarningsWidgetProps) {
           <p className="text-2xl font-bold">
             {displayedTotal.toFixed(2)} {CURRENCY}
           </p>
-          <p className="mt-1 text-sm text-gray-600">
-            {rangeLabel
-              ? `Изчислено за ${rangeLabel} (${APP_TIME_ZONE}).`
-              : `На база всички приключени поръчки (${APP_TIME_ZONE}).`}
-          </p>
+         
         </div>
         <div>
           <p className="mb-2 text-xs uppercase tracking-[0.2em] text-gray-500">Период</p>
