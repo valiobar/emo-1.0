@@ -1,0 +1,15 @@
+---
+description: Performance rules that apply to all code — async patterns, connection pooling, query optimization, caching, and profiling
+alwaysApply: true
+---
+
+# Performance Rules
+
+
+## Frontend (Next.js)
+
+- Prefer React Server Components — only add `"use client"` when the component needs interactivity
+- Minimize client-side JavaScript bundles; move data fetching to server components or route handlers
+- Set `Cache-Control` / `revalidate` headers on API responses and `fetch()` calls
+- Use streaming (`loading.tsx`, `Suspense`) for pages with slow data sources
+
