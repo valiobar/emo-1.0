@@ -6,11 +6,38 @@ import { RestaurantTable } from "@/lib/types";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
-type ReadyCountRow = {
-  orders: {
-    table_id: string;
-  };
-};
+function extractTableIdFromReadyItem(item: unknown): string | null {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const row = item as { orders?: unknown };
+  const { orders } = row;
+
+  if (Array.isArray(orders)) {
+    const firstOrder = orders[0];
+    if (
+      firstOrder &&
+      typeof firstOrder === "object" &&
+      "table_id" in firstOrder &&
+      typeof firstOrder.table_id === "string"
+    ) {
+      return firstOrder.table_id;
+    }
+    return null;
+  }
+
+  if (
+    orders &&
+    typeof orders === "object" &&
+    "table_id" in orders &&
+    typeof orders.table_id === "string"
+  ) {
+    return orders.table_id;
+  }
+
+  return null;
+}
 
 interface TableGridProps {
   initialTables: RestaurantTable[];
@@ -36,8 +63,11 @@ export function TableGrid({ initialTables, initialReadyCounts }: TableGridProps)
       }
 
       const counts: Record<string, number> = {};
-      for (const item of (data ?? []) as ReadyCountRow[]) {
-        const tableId = item.orders.table_id;
+      for (const item of data ?? []) {
+        const tableId = extractTableIdFromReadyItem(item);
+        if (!tableId) {
+          continue;
+        }
         counts[tableId] = (counts[tableId] ?? 0) + 1;
       }
       setReadyCounts(counts);

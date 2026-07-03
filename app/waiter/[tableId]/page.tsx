@@ -3,6 +3,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { OrderView } from "./OrderView";
 
+export const dynamic = "force-dynamic";
+
 interface TableOrderPageProps {
   params: Promise<{
     tableId: string;

@@ -1,11 +1,40 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { TableGrid } from "./TableGrid";
 
-type ReadyCountRow = {
-  orders: {
-    table_id: string;
-  };
-};
+export const dynamic = "force-dynamic";
+
+function extractTableIdFromReadyItem(item: unknown): string | null {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const row = item as { orders?: unknown };
+  const { orders } = row;
+
+  if (Array.isArray(orders)) {
+    const firstOrder = orders[0];
+    if (
+      firstOrder &&
+      typeof firstOrder === "object" &&
+      "table_id" in firstOrder &&
+      typeof firstOrder.table_id === "string"
+    ) {
+      return firstOrder.table_id;
+    }
+    return null;
+  }
+
+  if (
+    orders &&
+    typeof orders === "object" &&
+    "table_id" in orders &&
+    typeof orders.table_id === "string"
+  ) {
+    return orders.table_id;
+  }
+
+  return null;
+}
 
 export default async function WaiterPage() {
   const supabase = createServiceRoleClient();
@@ -30,8 +59,11 @@ export default async function WaiterPage() {
   }
 
   const readyCounts: Record<string, number> = {};
-  for (const item of (readyItems ?? []) as ReadyCountRow[]) {
-    const tableId = item.orders.table_id;
+  for (const item of readyItems ?? []) {
+    const tableId = extractTableIdFromReadyItem(item);
+    if (!tableId) {
+      continue;
+    }
     readyCounts[tableId] = (readyCounts[tableId] ?? 0) + 1;
   }
 
