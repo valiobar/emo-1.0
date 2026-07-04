@@ -43,6 +43,11 @@ export function KitchenColumn({ title, items }: KitchenColumnProps) {
               <div className="mt-1 font-semibold text-gray-900">
                 {item.quantity}x {item.name_snapshot}
               </div>
+              {item.notes && (
+                <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-sm font-medium text-amber-900">
+                  {item.notes}
+                </p>
+              )}
               {next && (
                 <button
                   type="button"

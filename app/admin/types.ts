@@ -1,3 +1,9 @@
+export interface AdminOrderItem {
+  readonly nameSnapshot: string;
+  readonly quantity: number;
+  readonly priceSnapshot: number;
+}
+
 export interface AdminOrderRow {
   readonly id: string;
   readonly tableId: string;
@@ -7,4 +13,5 @@ export interface AdminOrderRow {
   readonly closedAt: string | null;
   readonly itemsCount: number;
   readonly totalAmount: number;
+  readonly items: AdminOrderItem[];
 }

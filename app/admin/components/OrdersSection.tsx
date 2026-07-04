@@ -1,8 +1,9 @@
 "use client";
 
+import { IconActionButton } from "@/components/IconActionButton";
 import { CURRENCY } from "@/lib/constants";
 import { RestaurantTable } from "@/lib/types";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AdminOrderRow } from "../types";
 
 interface OrdersSectionProps {
@@ -27,10 +28,24 @@ export function OrdersSection({
   toDate,
   selectedTableId,
 }: OrdersSectionProps) {
+  const [expandedOrderIds, setExpandedOrderIds] = useState<ReadonlySet<string>>(() => new Set());
+
   const openOrdersCount = useMemo(
     () => orders.filter((order) => order.status === "open").length,
     [orders],
   );
+
+  function toggleOrderExpanded(orderId: string) {
+    setExpandedOrderIds((current) => {
+      const next = new Set(current);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  }
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
@@ -80,34 +95,71 @@ export function OrdersSection({
             Няма поръчки за избрания период.
           </p>
         ) : (
-          orders.map((order) => (
-            <article key={order.id} className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="font-medium">{order.tableName}</p>
-                  <p className="text-xs text-gray-500">Поръчка #{order.id.slice(0, 8)}</p>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-1 text-xs ${
-                    order.status === "open"
-                      ? "bg-orange-100 text-orange-700"
-                      : "bg-emerald-100 text-emerald-700"
-                  }`}
-                >
-                  {order.status === "open" ? "Отворена" : "Затворена"}
-                </span>
-              </div>
+          orders.map((order) => {
+            const isExpanded = expandedOrderIds.has(order.id);
 
-              <div className="mt-2 grid grid-cols-1 gap-1 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
-                <p>Създадена: {formatDateTime(order.createdAt)}</p>
-                <p>Затворена: {formatDateTime(order.closedAt)}</p>
-                <p>Артикули: {order.itemsCount}</p>
-                <p>
-                  Сума: {order.totalAmount.toFixed(2)} {CURRENCY}
-                </p>
-              </div>
-            </article>
-          ))
+            return (
+              <article key={order.id} className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <IconActionButton
+                      onClick={() => toggleOrderExpanded(order.id)}
+                      label={isExpanded ? "Скрий артикулите" : "Покажи артикулите"}
+                      title={isExpanded ? "Скрий артикулите" : "Покажи артикулите"}
+                      tone="primary"
+                    >
+                      {isExpanded ? "▾" : "▸"}
+                    </IconActionButton>
+                    <div className="min-w-0">
+                      <p className="font-medium">{order.tableName}</p>
+                      <p className="text-xs text-gray-500">Поръчка #{order.id.slice(0, 8)}</p>
+                    </div>
+                  </div>
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs ${
+                      order.status === "open"
+                        ? "bg-orange-100 text-orange-700"
+                        : "bg-emerald-100 text-emerald-700"
+                    }`}
+                  >
+                    {order.status === "open" ? "Отворена" : "Затворена"}
+                  </span>
+                </div>
+
+                <div className="mt-2 grid grid-cols-1 gap-1 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
+                  <p>Създадена: {formatDateTime(order.createdAt)}</p>
+                  <p>Затворена: {formatDateTime(order.closedAt)}</p>
+                  <p>Артикули: {order.itemsCount}</p>
+                  <p>
+                    Сума: {order.totalAmount.toFixed(2)} {CURRENCY}
+                  </p>
+                </div>
+
+                {isExpanded && (
+                  <div className="mt-3 rounded-xl border border-gray-200 bg-white px-3 py-2">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Артикули в поръчката
+                    </p>
+                    <ul className="divide-y divide-gray-100">
+                      {order.items.map((item, index) => (
+                        <li
+                          key={`${order.id}-${item.nameSnapshot}-${index}`}
+                          className="flex items-center justify-between gap-3 py-2 text-sm"
+                        >
+                          <span className="font-medium text-gray-900">
+                            {item.quantity}x {item.nameSnapshot}
+                          </span>
+                          <span className="text-gray-600">
+                            {(item.quantity * item.priceSnapshot).toFixed(2)} {CURRENCY}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </article>
+            );
+          })
         )}
       </div>
     </section>

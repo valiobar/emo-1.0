@@ -196,7 +196,7 @@ export async function addOrderItemForTable(tableId: string, menuItemId: string, 
 
 export async function addOrderItemsForTable(
   tableId: string,
-  items: { menuItemId: string; quantity: number }[],
+  items: { menuItemId: string; quantity: number; notes?: string }[],
 ) {
   const normalizedItems = items.filter(
     (item) => item.menuItemId.trim().length > 0 && item.quantity > 0,
@@ -231,6 +231,7 @@ export async function addOrderItemsForTable(
       name_snapshot: menu.name,
       price_snapshot: menu.price,
       quantity: item.quantity,
+      notes: item.notes?.trim() || null,
       status: "pending" as const,
     };
   });
@@ -246,7 +247,12 @@ export async function addOrderItemsForTable(
   return orderId;
 }
 
-export async function addOrderItem(orderId: string, menuItemId: string, quantity = 1) {
+export async function addOrderItem(
+  orderId: string,
+  menuItemId: string,
+  quantity = 1,
+  notes?: string,
+) {
   const supabase = createServiceRoleClient();
 
   const { data: menuItem, error: menuItemError } = await supabase
@@ -265,6 +271,7 @@ export async function addOrderItem(orderId: string, menuItemId: string, quantity
     name_snapshot: menuItem.name,
     price_snapshot: menuItem.price,
     quantity,
+    notes: notes?.trim() || null,
     status: "pending",
   });
 

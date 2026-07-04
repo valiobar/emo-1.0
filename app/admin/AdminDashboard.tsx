@@ -1,10 +1,19 @@
 "use client";
 
 import { MenuCategory, MenuItem, RestaurantTable } from "@/lib/types";
+import { useState } from "react";
 import { DishesSection } from "./components/DishesSection";
 import { OrdersSection } from "./components/OrdersSection";
 import { TablesSection } from "./components/TablesSection";
 import { AdminOrderRow } from "./types";
+
+type AdminTab = "orders" | "tables" | "menu";
+
+const TABS: { id: AdminTab; label: string }[] = [
+  { id: "orders", label: "Поръчки" },
+  { id: "tables", label: "Маси" },
+  { id: "menu", label: "Меню" },
+];
 
 interface AdminDashboardProps {
   readonly categories: MenuCategory[];
@@ -25,6 +34,8 @@ export function AdminDashboard({
   toDate,
   selectedTableId,
 }: AdminDashboardProps) {
+  const [activeTab, setActiveTab] = useState<AdminTab>("orders");
+
   return (
     <main className="mx-auto w-full max-w-7xl p-4 text-gray-900 sm:p-6">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -40,19 +51,46 @@ export function AdminDashboard({
         </div>
       </header>
 
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <OrdersSection
-          orders={orders}
-          tables={tables}
-          fromDate={fromDate}
-          toDate={toDate}
-          selectedTableId={selectedTableId}
-        />
-        <TablesSection tables={tables} />
+      <div
+        role="tablist"
+        aria-label="Секции на админ панела"
+        className="mb-4 flex flex-wrap gap-1 rounded-2xl border border-gray-200 bg-gray-50 p-1"
+      >
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(tab.id)}
+              className={`min-h-10 rounded-xl px-4 py-2 text-sm font-medium transition ${
+                isActive
+                  ? "bg-white text-indigo-700 shadow-sm ring-1 ring-gray-200"
+                  : "text-gray-600 hover:bg-white/70 hover:text-gray-900"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="mt-4">
-        <DishesSection categories={categories} items={items} />
+      <div role="tabpanel">
+        {activeTab === "orders" && (
+          <OrdersSection
+            orders={orders}
+            tables={tables}
+            fromDate={fromDate}
+            toDate={toDate}
+            selectedTableId={selectedTableId}
+          />
+        )}
+
+        {activeTab === "tables" && <TablesSection tables={tables} />}
+
+        {activeTab === "menu" && <DishesSection categories={categories} items={items} />}
       </div>
     </main>
   );

@@ -41,6 +41,7 @@ create table public.order_items (
   name_snapshot text not null,
   price_snapshot numeric(10,2) not null,
   quantity int not null default 1 check (quantity > 0),
+  notes text,
   status text not null default 'pending' check (status in ('pending','preparing','ready','served')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

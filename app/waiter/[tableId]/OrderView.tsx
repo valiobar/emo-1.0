@@ -4,13 +4,12 @@ import { addOrderItemsForTable, closeOrder } from "@/app/actions/orders";
 import { BillTotal } from "@/components/BillTotal";
 import { MenuPicker } from "@/components/MenuPicker";
 import { OrderItemRow } from "@/components/OrderItemRow";
-import { CURRENCY } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import { MenuCategory, MenuItem, OrderItem, RestaurantTable } from "@/lib/types";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 interface OrderViewProps {
   readonly table: RestaurantTable;
@@ -45,9 +44,7 @@ export function OrderView({
 }: OrderViewProps) {
   const router = useRouter();
   const [orderItems, setOrderItems] = useState(initialOrderItems);
-  const [newItemsByMenuId, setNewItemsByMenuId] = useState<Record<string, number>>({});
   const [isPending, startTransition] = useTransition();
-  const confirmInFlightRef = useRef(false);
 
   useEffect(() => {
     setOrderItems(initialOrderItems);
@@ -80,30 +77,7 @@ export function OrderView({
   }, [orderId]);
 
   const hasUnservedItems = orderItems.some((item) => item.status !== "served");
-  const pendingNewItems = Object.entries(newItemsByMenuId)
-    .map(([menuItemId, quantity]) => {
-      const menuItem = menuItems.find((item) => item.id === menuItemId);
-      if (!menuItem || quantity < 1) {
-        return null;
-      }
-
-      return {
-        menuItemId,
-        quantity,
-        name: menuItem.name,
-        price: menuItem.price,
-      };
-    })
-    .filter((entry): entry is { menuItemId: string; quantity: number; name: string; price: number } =>
-      Boolean(entry),
-    );
-
-  const hasPendingNewItems = pendingNewItems.length > 0;
-  const pendingNewItemsTotal = pendingNewItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
-  const hasAnyItemsInView = orderItems.length > 0 || hasPendingNewItems;
+  const hasAnyItemsInView = orderItems.length > 0;
 
   return (
     <main className="mx-auto max-w-4xl p-4 text-gray-900 sm:p-6">
@@ -126,11 +100,16 @@ export function OrderView({
           categories={categories}
           items={menuItems}
           disabled={isPending}
-          onAddItem={(menuItemId) => {
-            setNewItemsByMenuId((prev) => ({
-              ...prev,
-              [menuItemId]: (prev[menuItemId] ?? 0) + 1,
-            }));
+          onConfirmItem={(menuItemId, quantity, notes) => {
+            startTransition(async () => {
+              try {
+                await addOrderItemsForTable(table.id, [{ menuItemId, quantity, notes }]);
+                router.refresh();
+              } catch (error) {
+                console.error("Failed to add item:", error);
+                alert("Неуспешно добавяне на артикула. Моля, опитайте отново.");
+              }
+            });
           }}
         />
       </section>
@@ -139,91 +118,6 @@ export function OrderView({
         <h2 className="mb-3 text-lg font-semibold">Текуща сметка</h2>
         {!hasAnyItemsInView && (
           <p className="text-gray-500">Все още няма поръчани артикули.</p>
-        )}
-        {pendingNewItems.map((item) => (
-          <div
-            key={item.menuItemId}
-            className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-3"
-          >
-            <div>
-              <div className="font-medium text-gray-900">
-                {item.quantity}x {item.name}
-              </div>
-              <div className="text-sm text-sky-800">
-                {(item.price * item.quantity).toFixed(2)} {CURRENCY} · Ново (непотвърдено)
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={() =>
-                  setNewItemsByMenuId((prev) => ({
-                    ...prev,
-                    [item.menuItemId]: (prev[item.menuItemId] ?? 0) + 1,
-                  }))
-                }
-                className="min-h-10 min-w-10 rounded-lg border border-gray-300 bg-white font-semibold text-gray-900 hover:bg-gray-100"
-              >
-                +
-              </button>
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={() =>
-                  setNewItemsByMenuId((prev) => {
-                    const nextQuantity = (prev[item.menuItemId] ?? 0) - 1;
-                    if (nextQuantity <= 0) {
-                      const { [item.menuItemId]: _removed, ...rest } = prev;
-                      return rest;
-                    }
-                    return { ...prev, [item.menuItemId]: nextQuantity };
-                  })
-                }
-                className="min-h-10 min-w-10 rounded-lg border border-gray-300 bg-white font-semibold text-gray-900 hover:bg-gray-100"
-              >
-                -
-              </button>
-            </div>
-          </div>
-        ))}
-        {hasPendingNewItems && (
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2">
-            <p className="text-sm font-medium text-indigo-900">
-              Непотвърдени артикули: {pendingNewItemsTotal.toFixed(2)} {CURRENCY}
-            </p>
-            <button
-              type="button"
-              disabled={isPending || confirmInFlightRef.current}
-              onClick={() => {
-                startTransition(async () => {
-                  if (confirmInFlightRef.current) {
-                    return;
-                  }
-                  confirmInFlightRef.current = true;
-                  try {
-                    await addOrderItemsForTable(
-                      table.id,
-                      pendingNewItems.map((item) => ({
-                        menuItemId: item.menuItemId,
-                        quantity: item.quantity,
-                      })),
-                    );
-                    setNewItemsByMenuId({});
-                    router.refresh();
-                  } catch (error) {
-                    console.error("Failed to confirm new items:", error);
-                    alert("Неуспешно потвърждаване на новите артикули. Моля, опитайте отново.");
-                  } finally {
-                    confirmInFlightRef.current = false;
-                  }
-                });
-              }}
-              className="min-h-10 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60"
-            >
-              Потвърди новите артикули
-            </button>
-          </div>
         )}
         {orderItems.map((item) => (
           <OrderItemRow key={item.id} item={item} />

@@ -153,7 +153,7 @@ export default async function AdminPage({
 
     let ordersQuery = supabase
       .from("orders")
-      .select("id, table_id, status, created_at, closed_at, tables(name), order_items(quantity, price_snapshot)")
+      .select("id, table_id, status, created_at, closed_at, tables(name), order_items(name_snapshot, quantity, price_snapshot)")
       .gte("created_at", fromIso)
       .lt("created_at", toExclusiveIso)
       .order("created_at", { ascending: false });
@@ -189,6 +189,11 @@ export default async function AdminPage({
           closedAt: order.closed_at,
           itemsCount,
           totalAmount,
+          items: orderItems.map((item) => ({
+            nameSnapshot: item.name_snapshot,
+            quantity: item.quantity,
+            priceSnapshot: item.price_snapshot,
+          })),
         };
       })
       .filter((order) => order.itemsCount > 0);

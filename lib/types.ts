@@ -38,6 +38,7 @@ export interface OrderItem {
   name_snapshot: string;
   price_snapshot: number;
   quantity: number;
+  notes: string | null;
   status: OrderItemStatus;
   created_at: string;
   updated_at: string;

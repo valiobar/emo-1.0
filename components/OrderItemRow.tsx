@@ -29,6 +29,9 @@ export function OrderItemRow({ item }: OrderItemRowProps) {
         <div className="font-medium text-gray-900">
           {item.quantity}x {item.name_snapshot}
         </div>
+        {item.notes && (
+          <div className="mt-1 text-sm text-amber-700">{item.notes}</div>
+        )}
         <div className="text-sm text-gray-500">
           {(item.price_snapshot * item.quantity).toFixed(2)} {CURRENCY}
         </div>

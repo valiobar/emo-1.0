@@ -16,7 +16,7 @@ export function HamburgerMenu() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="fixed right-4 top-4 z-50">
+    <div className="fixed right-4 top-4 z-50 flex flex-col items-end">
       <button
         type="button"
         aria-label="Отвори навигационното меню"
